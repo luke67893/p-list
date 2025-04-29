@@ -91,35 +91,149 @@
     .bearbeiten-aktiv {
       background-color: #fff9c4;
     }
+
+    .aktiv-schueler {
+      background-color: #ffd54f !important;
+      border: 2px solid #fbc02d !important;
+      color: black;
+    }
+
+    /* Slider Switch für Klassenmodus */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 26px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #4CAF50;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+
+    /* Sidebar Menü und Overlay */
+    #sidebarMenu {
+      position: fixed;
+      top: 0;
+      left: -250px;
+      width: 250px;
+      height: 100%;
+      background: white;
+      border-right: 1px solid #ccc;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+      padding: 20px;
+      transition: left 0.3s ease;
+      z-index: 10000;
+      visibility: hidden;
+    }
+
+    #sidebarMenu.visible {
+      left: 0;
+      visibility: visible;
+    }
+
+    #sidebarOverlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.3);
+      z-index: 9999;
+    }
+    .menu-link {
+      padding: 16px 10px;
+      font-size: 1.3em;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .menu-link:hover {
+      background-color: #f0f0f0;
+    }
   </style>
 </head>
 <body>
-  <h1>Toilettenliste</h1>
-
-  <label>Gesamtname:<br><input type="text" id="gesamtname"></label>
-  <label>Klasse:<br><input type="text" id="klasse"></label>
-  <label>Fach:<br>
-    <select id="fach">
-      <option value="Mathe">Mathe</option>
-      <option value="Physik">Physik</option>
-    </select>
-  </label>
-
-  <div class="button-panel">
-    <button class="action-button" onclick="startToilette()">🚻 Toilette</button>
-    <button class="action-button" onclick="zurueckkommen()">✅ Zurück</button>
-    <div style="position: relative; display: inline-block;">
-      <button style="margin-top:20px; font-size:1.2em; background:#eee; border:none; border-radius:10px; padding:10px 14px;" onclick="toggleMenu()">⋯</button>
-      <div id="optionsMenu" style="display: none; position: absolute; right: 0; background: white; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; min-width: 220px;">
-        <button style="display: block; width: 100%; padding: 10px; border: none; background: none; text-align: left; font-size: 1em; cursor: pointer;" onclick="lehrerEinstellungen()">⚙️ Lehrer-Einstellungen</button>
-        <button style="display: block; width: 100%; padding: 10px; border: none; background: none; text-align: left; font-size: 1em; cursor: pointer;" onclick="pdfErstellen()">📄 PDF erstellen</button>
-        <button style="display: block; width: 100%; padding: 10px; border: none; background: none; text-align: left; font-size: 1em; cursor: pointer;" onclick="tageVerwalten()">🗂️ Tagesverwaltung</button>
-        <button style="display: block; width: 100%; padding: 10px; border: none; background: none; text-align: left; font-size: 1em; cursor: pointer;" onclick="datenbankLoeschen()">🗑️ Datenbank löschen</button>
-      </div>
-    </div>
+  <div style="position: absolute; top: 10px; left: 10px;">
+    <button style="font-size:1.5em; background:#eee; border:none; border-radius:10px; padding:10px 14px;" onclick="toggleMenu()">☰</button>
+  </div>
+  <div style="position: absolute; top: 10px; right: 10px;">
+    <label style="display: flex; align-items: center; gap: 10px;">
+      <span>👤</span>
+      <label class="switch">
+        <input type="checkbox" id="klassenmodusToggle" onchange="toggleKlassenmodus()">
+        <span class="slider"></span>
+      </label>
+      <span>🏫</span>
+    </label>
   </div>
 
+  <h1>Toilettenliste</h1>
+
   <div id="aktiverStatus"></div>
+
+  <div id="manuellInput">
+    <label>Gesamtname:<br><input type="text" id="gesamtname"></label>
+    <label>Klasse:<br><input type="text" id="klasse"></label>
+    <label>Fach:<br>
+      <select id="fach">
+        <option value="Mathe">Mathe</option>
+        <option value="Physik">Physik</option>
+      </select>
+    </label>
+    <div class="button-panel">
+      <button class="action-button" onclick="startToilette()">🚻 Toilette</button>
+      <button class="action-button" onclick="zurueckkommen()">✅ Zurück</button>
+    </div>
+  </div>
+  <div id="klassenmodusInterface" style="display:none;">
+    <h2>Klassenmodus aktiv</h2>
+    <div style="margin-bottom: 10px;">
+      <label>Klasse wählen:
+        <select id="klasseSelect" onchange="baueKlassenInterface()" style="padding:5px; font-size:1em; border-radius:6px;">
+          <option value="" disabled selected>Bitte wählen</option>
+        </select>
+      </label>
+      <label>Fach:
+        <select id="fachKlassenmodus" style="padding:5px; font-size:1em; border-radius:6px;"></select>
+      </label>
+    </div>
+    <div id="klassenSchuelerListe" style="display:flex; flex-wrap:wrap; justify-content:center; gap:10px;"></div>
+  </div>
 
   <div id="lehrerOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); z-index:9998;"></div>
 
@@ -127,8 +241,8 @@
     <h3>Lehrer-Einstellungen</h3>
     <label>Lehrername:<br><input type="text" id="lehrerNameInput" style="width:90%; padding:5px;"></label><br>
     <label>Fächer (kommagetrennt):<br><input type="text" id="faecherInput" style="width:90%; padding:5px;"></label><br><br>
-    <button onclick="speichereLehrerDaten(); document.getElementById('lehrerOverlay').style.display='none'">✅ Speichern</button>
-    <button onclick="document.getElementById('lehrerModal').style.display='none'; document.getElementById('lehrerOverlay').style.display='none'">❌ Schließen</button>
+    <button class="menu-button" onclick="speichereLehrerDaten(); document.getElementById('lehrerOverlay').style.display='none'">✅ Speichern</button>
+    <button class="menu-button" onclick="document.getElementById('lehrerModal').style.display='none'; document.getElementById('lehrerOverlay').style.display='none'">❌ Schließen</button>
   </div>
 
   <h2>Aktuelle Liste</h2>
@@ -149,11 +263,32 @@
     <tbody id="listBody"></tbody>
   </table>
 
+<div id="sidebarOverlay" onclick="toggleMenu()"></div>
+<div id="sidebarMenu">
+  <h3 style="margin-top:0;">Menü</h3>
+  <ul id="sidebarMenuList" style="list-style: none; padding: 0; margin-top: 20px;">
+    <li style="margin-bottom:10px;"><div onclick="lehrerEinstellungen(); toggleMenu();" class="menu-link">⚙️ Lehrer-Einstellungen</div></li>
+    <li style="margin-bottom:10px;"><div onclick="pdfErstellen(); toggleMenu();" class="menu-link">📄 PDF erstellen</div></li>
+    <li style="margin-bottom:10px;"><div onclick="tageVerwalten(); toggleMenu();" class="menu-link">🗂️ Tagesverwaltung</div></li>
+    <li style="margin-bottom:10px;"><div onclick="datenbankLoeschen(); toggleMenu();" class="menu-link">🗑️ Datenbank löschen</div></li>
+    <li style="margin-bottom:10px;"><div onclick="klassenVerwaltung(); toggleMenu();" class="menu-link">🏫 Klassen verwalten</div></li>
+    <li><div onclick="toggleMenu()" class="menu-link">❌ Schließen</div></li>
+  </ul>
+</div>
+
 <script>
 let bearbeitet = false;
 function toggleMenu() {
-  const menu = document.getElementById("optionsMenu");
-  menu.style.display = (menu.style.display === "block") ? "none" : "block";
+  const menu = document.getElementById("sidebarMenu");
+  const overlay = document.getElementById("sidebarOverlay");
+  const visible = menu.classList.contains("visible");
+  if (visible) {
+    menu.classList.remove("visible");
+    overlay.style.display = "none";
+  } else {
+    menu.classList.add("visible");
+    overlay.style.display = "block";
+  }
 }
 function bestimmeStunde(klasse) {
   const jahrgang = parseInt(klasse);
@@ -424,11 +559,6 @@ function pdfErstellen() {
 }
 
 function datenbankLoeschen() {
-  const passwort = prompt("Bitte Passwort eingeben:");
-  if (passwort !== "123") {
-    alert("Falsches Passwort.");
-    return;
-  }
   if (confirm("Bist du sicher, dass du die gesamte Toilettenliste löschen möchtest?")) {
     if (confirm("Das ist endgültig. Wirklich löschen?")) {
       localStorage.removeItem("eintraege");
@@ -456,13 +586,18 @@ function speichereLehrerDaten() {
 }
 
 function aktualisiereFachDropdown(faecher) {
-  const select = document.getElementById('fach');
-  select.innerHTML = '';
-  faecher.forEach(fach => {
-    const opt = document.createElement('option');
-    opt.value = fach;
-    opt.textContent = fach;
-    select.appendChild(opt);
+  const selectManuell = document.getElementById('fach');
+  const selectKlassenmodus = document.getElementById('fachKlassenmodus');
+  [selectManuell, selectKlassenmodus].forEach(select => {
+    if (select) {
+      select.innerHTML = '';
+      faecher.forEach(fach => {
+        const opt = document.createElement('option');
+        opt.value = fach;
+        opt.textContent = fach;
+        select.appendChild(opt);
+      });
+    }
   });
 }
 
@@ -659,6 +794,214 @@ function zeileLoeschen(index) {
     speichernUndAnzeigen();
   }
 }
+// --- Klassenverwaltung Modal und Funktionen ---
+function klassenVerwaltung() {
+  document.getElementById('klassenModal').style.display = 'block';
+  document.getElementById('klassenOverlay').style.display = 'block';
+  const klasse = document.getElementById('klasse').value.trim();
+  document.getElementById('klassenKeyInput').value = klasse;
+  const liste = JSON.parse(localStorage.getItem('klassen_' + klasse) || '[]');
+  document.getElementById('klassenSchuelerInput').value = liste.join('\n');
+
+  // Neue Anzeige der vorhandenen Klassen:
+  const vorhandeneKlassenListe = document.getElementById('vorhandeneKlassenListe');
+  vorhandeneKlassenListe.innerHTML = "<strong>Vorhandene Klassen:</strong><br>";
+  for (let key in localStorage) {
+    if (key.startsWith('klassen_')) {
+      const klassenschluessel = key.replace('klassen_', '');
+      const link = document.createElement('div');
+      link.style.display = 'flex';
+      link.style.justifyContent = 'space-between';
+      link.style.alignItems = 'center';
+      link.style.marginBottom = '5px';
+
+      const span = document.createElement('span');
+      span.textContent = klassenschluessel;
+      span.style.cursor = 'pointer';
+      span.style.color = '#007bff';
+      span.onclick = () => {
+        document.getElementById('klassenKeyInput').value = klassenschluessel;
+        const daten = JSON.parse(localStorage.getItem('klassen_' + klassenschluessel) || '[]');
+        document.getElementById('klassenSchuelerInput').value = daten.join('\n');
+      };
+
+      const del = document.createElement('button');
+      del.textContent = '🗑';
+      del.style.cursor = 'pointer';
+      del.style.background = 'none';
+      del.style.border = 'none';
+      del.style.color = 'red';
+      del.onclick = (e) => {
+        e.stopPropagation();
+        if (confirm(`Klasse "${klassenschluessel}" wirklich löschen?`)) {
+          localStorage.removeItem('klassen_' + klassenschluessel);
+          klassenVerwaltung();
+        }
+      };
+
+      link.appendChild(span);
+      link.appendChild(del);
+      vorhandeneKlassenListe.appendChild(link);
+    }
+  }
+  // Block für das Klassen-Dropdown füllen:
+  const select = document.getElementById('klasseSelect');
+  if (select) {
+    select.innerHTML = '';
+    for (let key in localStorage) {
+      if (key.startsWith('klassen_')) {
+        const option = document.createElement('option');
+        option.value = key.replace('klassen_', '');
+        option.textContent = key.replace('klassen_', '');
+        select.appendChild(option);
+      }
+    }
+  }
+}
+
+function speichereKlassenliste() {
+  const klasse = document.getElementById('klassenKeyInput').value.trim();
+  const schueler = document.getElementById('klassenSchuelerInput').value.split('\n').map(s => s.trim()).filter(s => s);
+  localStorage.setItem('klassen_' + klasse, JSON.stringify(schueler));
+  alert("Liste gespeichert für Klasse " + klasse);
+  document.getElementById('klassenModal').style.display = 'none';
+  document.getElementById('klassenOverlay').style.display = 'none';
+  klassenVerwaltung(); // Nach dem Speichern neu laden
+}
+// --- Klassenmodus Umschaltfunktion ---
+let klassenModus = false;
+let aktiveSchueler = {}; // für aktuell laufende Toilettengänge im Klassenmodus
+
+function toggleKlassenmodus() {
+  klassenModus = document.getElementById('klassenmodusToggle').checked;
+  const manuell = document.getElementById('manuellInput');
+  const klassen = document.getElementById('klassenmodusInterface');
+  if (klassenModus) {
+    manuell.style.display = 'none';
+    // SCHÜLERLISTE LEEREN STATT ANZUZEIGEN, bis eine Klasse gewählt ist:
+    const container = document.getElementById('klassenSchuelerListe');
+    container.innerHTML = '';
+    aktualisiereFachDropdown(JSON.parse(localStorage.getItem('faecherListe') || '[]'));
+    // Klassen-Dropdown füllen:
+    const select = document.getElementById('klasseSelect');
+    select.innerHTML = '';
+    // Platzhalter-Option hinzufügen
+    const placeholderOption = document.createElement('option');
+    placeholderOption.value = '';
+    placeholderOption.disabled = true;
+    placeholderOption.selected = true;
+    placeholderOption.textContent = 'Bitte wählen';
+    select.appendChild(placeholderOption);
+    for (let key in localStorage) {
+      if (key.startsWith('klassen_')) {
+        const klasseName = key.replace('klassen_', '');
+        const option = document.createElement('option');
+        option.value = klasseName;
+        option.textContent = klasseName;
+        select.appendChild(option);
+      }
+    }
+    select.value = '';
+    klassen.style.display = 'block';
+  } else {
+    manuell.style.display = 'block';
+    klassen.style.display = 'none';
+  }
+}
+
+function baueKlassenInterface() {
+  const select = document.getElementById('klasseSelect');
+  if (!select.value && select.options.length > 0) {
+    select.value = select.options[0].value;
+  }
+  const klasse = select?.value || document.getElementById('klasse')?.value.trim();
+  const schuelerListe = JSON.parse(localStorage.getItem('klassen_' + klasse) || '[]');
+  const container = document.getElementById('klassenSchuelerListe');
+  container.innerHTML = '';
+
+  schuelerListe.forEach(name => {
+    const btn = document.createElement('button');
+    btn.textContent = name;
+    btn.className = 'action-button';
+    btn.style.margin = '5px';
+
+    if (aktiveSchueler[name]) {
+      btn.classList.add('aktiv-schueler');
+    } else {
+      btn.classList.remove('aktiv-schueler');
+    }
+
+    btn.onclick = () => {
+      if (aktiveSchueler[name]) {
+        zurueckKlassenmodus(name);
+      } else {
+        startKlassenmodus(name);
+      }
+    };
+    container.appendChild(btn);
+  });
+}
+
+function startKlassenmodus(name) {
+  // Nur ein Schüler gleichzeitig unterwegs
+  if (Object.keys(aktiveSchueler).length > 0) {
+    alert("Es ist bereits ein Schüler unterwegs!");
+    return;
+  }
+  const klasse = document.getElementById('klasseSelect')?.value || document.getElementById('klasse')?.value.trim();
+  const fach = document.getElementById('fachKlassenmodus').value;
+  const [nachname, vorname] = name.split(' ');
+  aktiveSchueler[name] = {
+    id: Date.now(),
+    datum: formatDatum(new Date()),
+    stunde: bestimmeStunde(klasse),
+    fach: fach,
+    klasse: klasse,
+    nachname: nachname || '-',
+    vorname: vorname || '-',
+    von: new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+    bis: ""
+  };
+  aktiveSchueler[name].startZeit = new Date().toISOString();
+  stopuhrInterval = setInterval(updateAktiverStatus, 1000);
+  updateAktiverStatus();
+  baueKlassenInterface();
+}
+
+function zurueckKlassenmodus(name) {
+  const eintrag = aktiveSchueler[name];
+  eintrag.bis = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  eintraege.push(eintrag);
+  delete aktiveSchueler[name];
+  speichernUndAnzeigen();
+  clearInterval(stopuhrInterval);
+  updateAktiverStatus();
+  localStorage.setItem("eintraege", JSON.stringify(eintraege));
+  baueKlassenInterface();
+}
+
+function updateAktiverStatus() {
+  if (klassenModus) {
+    const jetzt = new Date();
+    let text = "";
+    for (const [name, eintrag] of Object.entries(aktiveSchueler)) {
+      const start = new Date(eintrag.startZeit);
+      const differenz = new Date(jetzt - start);
+      const minuten = String(differenz.getUTCMinutes()).padStart(2, '0');
+      const sekunden = String(differenz.getUTCSeconds()).padStart(2, '0');
+      text += `${name} (${minuten}:${sekunden}) unterwegs, `;
+    }
+    document.getElementById('aktiverStatus').innerText = text.slice(0, -2);
+    return;
+  } else {
+    if (!aktuellerEintrag || !startZeit) return;
+    const jetzt = new Date();
+    const differenz = new Date(jetzt - startZeit);
+    const minuten = String(differenz.getUTCMinutes()).padStart(2, '0');
+    const sekunden = String(differenz.getUTCSeconds()).padStart(2, '0');
+    document.getElementById('aktiverStatus').innerText = `${aktuellerEintrag.vorname} ${aktuellerEintrag.nachname} (${aktuellerEintrag.klasse}) unterwegs: ${minuten}:${sekunden}`;
+  }
+}
 </script>
 
   <div id="tageOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); z-index:9998;"></div>
@@ -667,10 +1010,20 @@ function zeileLoeschen(index) {
     <p>Klicke auf Daten, um sie auszuwählen:</p>
     <div id="kalenderTage" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 10px 0;"></div>
     <div style="text-align:center; margin-top:10px;">
-      <button onclick="pdfNurAuswahl()">📄 PDF für Auswahl</button>
-      <button onclick="loescheNurAuswahl()">🗑️ Auswahl löschen</button>
-      <button onclick="document.getElementById('tageModal').style.display='none'; document.getElementById('tageOverlay').style.display='none'">❌ Schließen</button>
+      <button class="menu-button" onclick="pdfNurAuswahl()">📄 PDF für Auswahl</button>
+      <button class="menu-button" onclick="loescheNurAuswahl()">🗑️ Auswahl löschen</button>
+      <button class="menu-button" onclick="document.getElementById('tageModal').style.display='none'; document.getElementById('tageOverlay').style.display='none'">❌ Schließen</button>
     </div>
+  </div>
+
+  <div id="klassenOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); z-index:9998;"></div>
+  <div id="klassenModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; border:1px solid #ccc; padding:20px; border-radius:10px; z-index:9999; max-height:90vh; overflow:auto;">
+    <h3>Klassenverwaltung</h3>
+    <label>Klasse:<br><input type="text" id="klassenKeyInput" style="width:90%; padding:5px;"></label><br>
+    <label>Schülerliste (ein Name pro Zeile):<br><textarea id="klassenSchuelerInput" rows="6" style="width:90%; padding:5px;"></textarea></label><br>
+    <div id="vorhandeneKlassenListe" style="margin-top:10px; text-align:left;"></div>
+    <button class="menu-button" onclick="speichereKlassenliste()">✅ Speichern</button>
+    <button class="menu-button" onclick="document.getElementById('klassenModal').style.display='none'; document.getElementById('klassenOverlay').style.display='none'">❌ Schließen</button>
   </div>
   <footer style="text-align:center; font-size:0.9em; color:#888; margin-top:40px;">
     Version 1.0
