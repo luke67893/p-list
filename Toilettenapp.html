@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Toilettenliste</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2em;
+      margin-bottom: 0.5em;
+    }
+    label {
+      display: block;
+      margin: 10px 0;
+      font-size: 1.2em;
+    }
+    input, select {
+      font-size: 1.2em;
+      padding: 8px;
+      width: 90%;
+      max-width: 400px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .button-panel {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 20px 0;
+      gap: 20px;
+    }
+    .action-button {
+      background: white;
+      border: none;
+      padding: 20px 40px;
+      font-size: 1.5em;
+      border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .action-button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
+    #aktiverStatus {
+      margin: 20px auto;
+      font-weight: bold;
+      color: #d9534f;
+      font-size: 1.4em;
+    }
+    table {
+      margin: 20px auto;
+      width: 95%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      font-size: 1em;
+    }
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    button.delete-btn {
+      background-color: #ff4d4d;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .bearbeiten-aktiv {
+      background-color: #fff9c4;
+    }
+  </style>
+</head>
+<body>
+  <h1>Toilettenliste</h1>
+
+  <label>Gesamtname:<br><input type="text" id="gesamtname"></label>
+  <label>Klasse:<br><input type="text" id="klasse"></label>
+  <label>Fach:<br>
+    <select id="fach">
+      <option value="Mathe">Mathe</option>
+      <option value="Physik">Physik</option>
+    </select>
+  </label>
+
+  <div class="button-panel">
+    <button class="action-button" onclick="startToilette()">🚻 Toilette</button>
+    <button class="action-button" onclick="zurueckkommen()">✅ Zurück</button>
+    <div style="position: relative; display: inline-block;">
+      <button style="margin-top:20px; font-size:1.2em; background:#eee; border:none; border-radius:10px; padding:10px 14px;" onclick="toggleMenu()">⋯</button>
+      <div id="optionsMenu" style="display: none; position: absolute; right: 0; background: white; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 10; min-width: 220px;">
+        <button style="display: block; width: 100%; padding: 10px; border: none; background: none; text-align: left; font-size: 1em; cursor: pointer;" onclick="lehrerEinstellungen()">⚙️ Lehrer-Einstellungen</button>
+        <button style="display: block; width: 100%; padding: 10px; border: none; background: none; text-align: left; font-size: 1em; cursor: pointer;" onclick="pdfErstellen()">📄 PDF erstellen</button>
+        <button style="display: block; width: 100%; padding: 10px; border: none; background: none; text-align: left; font-size: 1em; cursor: pointer;" onclick="tageVerwalten()">🗂️ Tagesverwaltung</button>
+        <button style="display: block; width: 100%; padding: 10px; border: none; background: none; text-align: left; font-size: 1em; cursor: pointer;" onclick="datenbankLoeschen()">🗑️ Datenbank löschen</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="aktiverStatus"></div>
+
+  <div id="lehrerOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); z-index:9998;"></div>
+
+  <div id="lehrerModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; border:1px solid #ccc; padding:20px; border-radius:10px; z-index:9999;">
+    <h3>Lehrer-Einstellungen</h3>
+    <label>Lehrername:<br><input type="text" id="lehrerNameInput" style="width:90%; padding:5px;"></label><br>
+    <label>Fächer (kommagetrennt):<br><input type="text" id="faecherInput" style="width:90%; padding:5px;"></label><br><br>
+    <button onclick="speichereLehrerDaten(); document.getElementById('lehrerOverlay').style.display='none'">✅ Speichern</button>
+    <button onclick="document.getElementById('lehrerModal').style.display='none'; document.getElementById('lehrerOverlay').style.display='none'">❌ Schließen</button>
+  </div>
+
+  <h2>Aktuelle Liste</h2>
+  <table id="liste">
+    <thead>
+      <tr>
+        <th>Datum</th>
+        <th>Stunde</th>
+        <th>Fach</th>
+        <th>Klasse</th>
+        <th>Nachname</th>
+        <th>Vorname</th>
+        <th>von</th>
+        <th>bis</th>
+        <th>Aktionen</th>
+      </tr>
+    </thead>
+    <tbody id="listBody"></tbody>
+  </table>
+
+<script>
+let bearbeitet = false;
+function toggleMenu() {
+  const menu = document.getElementById("optionsMenu");
+  menu.style.display = (menu.style.display === "block") ? "none" : "block";
+}
+function bestimmeStunde(klasse) {
+  const jahrgang = parseInt(klasse);
+  const jetzt = new Date();
+  const stunde = jetzt.getHours();
+  const minute = jetzt.getMinutes();
+  const zeit = stunde * 60 + minute;
+
+  let stundenplan = [];
+
+  if (jahrgang >= 5 && jahrgang <= 6) {
+    stundenplan = [
+      { von: 430, bis: 475, label: "0. Stunde" },
+      { von: 480, bis: 525, label: "1. Stunde" },
+      { von: 535, bis: 580, label: "2. Stunde" },
+      { von: 600, bis: 645, label: "3. Stunde" },
+      { von: 655, bis: 700, label: "4. Stunde" },
+      { von: 730, bis: 775, label: "5. Stunde" },
+      { von: 785, bis: 830, label: "6. Stunde" },
+      { von: 840, bis: 885, label: "7. Stunde" },
+      { von: 895, bis: 940, label: "8. Stunde" },
+      { von: 950, bis: 1020, label: "9. Stunde" }
+    ];
+  } else if (jahrgang >= 7 && jahrgang <= 10) {
+    stundenplan = [
+      { von: 430, bis: 475, label: "0. Stunde" },
+      { von: 480, bis: 525, label: "1. Stunde" },
+      { von: 535, bis: 580, label: "2. Stunde" },
+      { von: 600, bis: 645, label: "3. Stunde" },
+      { von: 655, bis: 700, label: "4. Stunde" },
+      { von: 710, bis: 755, label: "5. Stunde" },
+      { von: 785, bis: 830, label: "6. Stunde" },
+      { von: 840, bis: 885, label: "7. Stunde" },
+      { von: 895, bis: 940, label: "8. Stunde" },
+      { von: 950, bis: 1020, label: "9. Stunde" }
+    ];
+  } else {
+    // Oberstufe oder nicht erkannte Klasse
+    stundenplan = [
+      { von: 430, bis: 475, label: "0. Stunde" },
+      { von: 480, bis: 525, label: "1. Stunde" },
+      { von: 535, bis: 580, label: "2. Stunde" },
+      { von: 600, bis: 645, label: "3. Stunde" },
+      { von: 655, bis: 700, label: "4. Stunde" },
+      { von: 730, bis: 775, label: "5. Stunde" },
+      { von: 785, bis: 830, label: "6. Stunde" },
+      { von: 840, bis: 885, label: "7. Stunde" },
+      { von: 895, bis: 940, label: "8. Stunde" },
+      { von: 950, bis: 1020, label: "9. Stunde" }
+    ];
+  }
+
+  const gefunden = stundenplan.find(e => zeit >= e.von && zeit < e.bis);
+  return gefunden ? gefunden.label : "-";
+}
+
+let eintraege = [];
+let aktuellerEintrag = null;
+let stopuhrInterval = null;
+let startZeit = null;
+
+function formatDatum(date) {
+  const tag = String(date.getDate()).padStart(2, '0');
+  const monat = String(date.getMonth() + 1).padStart(2, '0');
+  const jahr = date.getFullYear();
+  return `${tag}.${monat}.${jahr}`;
+}
+
+function startToilette() {
+  if (!warnUnfinishedEdit()) return;
+  const name = document.getElementById('gesamtname').value.trim();
+  const klasse = document.getElementById('klasse').value.trim();
+  const fach = document.getElementById('fach').value;
+  if (!name || !klasse) {
+    alert("Bitte Name und Klasse eingeben!");
+    return;
+  }
+  if (aktuellerEintrag) {
+    alert("Es ist bereits jemand unterwegs!");
+    return;
+  }
+
+  const [nachname, vorname] = name.split(" ");
+  aktuellerEintrag = {
+    id: Date.now(),
+    datum: formatDatum(new Date()),
+    stunde: bestimmeStunde(klasse),
+    fach: fach,
+    klasse: klasse,
+    nachname: nachname || "-",
+    vorname: vorname || "-",
+    von: new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+    bis: ""
+  };
+  startZeit = new Date();
+  stopuhrInterval = setInterval(updateAktiverStatus, 1000);
+  updateAktiverStatus();
+  localStorage.setItem("eintraege", JSON.stringify(eintraege));
+}
+
+function zurueckkommen() {
+  if (!warnUnfinishedEdit()) return;
+  if (!aktuellerEintrag) {
+    alert("Niemand ist aktuell unterwegs!");
+    return;
+  }
+  aktuellerEintrag.bis = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  eintraege.push(aktuellerEintrag);
+  aktuellerEintrag = null;
+  clearInterval(stopuhrInterval);
+  document.getElementById('aktiverStatus').innerText = "";
+  speichernUndAnzeigen();
+  localStorage.setItem("eintraege", JSON.stringify(eintraege));
+}
+
+function updateAktiverStatus() {
+  if (!aktuellerEintrag || !startZeit) return;
+  const jetzt = new Date();
+  const differenz = new Date(jetzt - startZeit);
+  const minuten = String(differenz.getUTCMinutes()).padStart(2, '0');
+  const sekunden = String(differenz.getUTCSeconds()).padStart(2, '0');
+  document.getElementById('aktiverStatus').innerText = `${aktuellerEintrag.vorname} ${aktuellerEintrag.nachname} (${aktuellerEintrag.klasse}) unterwegs: ${minuten}:${sekunden}`;
+}
+
+function speichernUndAnzeigen() {
+  const tbody = document.getElementById('listBody');
+  tbody.innerHTML = "";
+  // Sortierung nach Datum und Uhrzeit (wie gewünscht)
+  eintraege.sort((a, b) => {
+    const [ta, ma, ja] = a.datum.split('.').map(Number);
+    const [tb, mb, jb] = b.datum.split('.').map(Number);
+    const datumA = new Date(ja, ma - 1, ta, ...(a.von || '00:00').split(':').map(Number));
+    const datumB = new Date(jb, mb - 1, tb, ...(b.von || '00:00').split(':').map(Number));
+    return datumA - datumB;
+  });
+  eintraege.forEach((eintrag, index) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${eintrag.datum}</td>
+      <td>${eintrag.stunde}</td>
+      <td>${eintrag.fach}</td>
+      <td>${eintrag.klasse}</td>
+      <td>${eintrag.nachname}</td>
+      <td>${eintrag.vorname}</td>
+      <td>${eintrag.von}</td>
+      <td>${eintrag.bis}</td>
+      <td>
+        <button class='delete-btn' onclick='zeileLoeschen(${index})'>🗑</button>
+        <button onclick="eintragBearbeiten(${index})">⋯</button>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+  localStorage.setItem("eintraege", JSON.stringify(eintraege));
+  currentEditIndex = null;
+}
+
+let currentEditIndex = null;
+
+// Neue Funktion zum Bearbeiten einer Tabellenzeile
+function eintragBearbeiten(index) {
+  const tbody = document.getElementById('listBody');
+  Array.from(tbody.children).forEach(tr => tr.classList.remove('bearbeiten-aktiv'));
+  const row = tbody.children[index];
+  row.classList.add('bearbeiten-aktiv');
+  const eintrag = eintraege[index];
+  row.innerHTML = `
+    <td contenteditable="true">${eintrag.datum}</td>
+    <td contenteditable="true">${eintrag.stunde}</td>
+    <td contenteditable="true">${eintrag.fach}</td>
+    <td contenteditable="true">${eintrag.klasse}</td>
+    <td contenteditable="true">${eintrag.nachname}</td>
+    <td contenteditable="true">${eintrag.vorname}</td>
+    <td contenteditable="true">${eintrag.von}</td>
+    <td contenteditable="true">${eintrag.bis}</td>
+    <td>
+      <button onclick='speichernZeile(${index}, this)'>✅</button>
+      <button onclick='speichernUndAnzeigen()'>❌</button>
+    </td>
+  `;
+  currentEditIndex = index;
+  bearbeitet = false;
+  const rowInputs = document.getElementById('listBody').children[index].querySelectorAll('td[contenteditable]');
+  rowInputs.forEach(cell => {
+    cell.addEventListener('input', () => {
+      bearbeitet = true;
+    }, { once: true });
+  });
+}
+
+function warnUnfinishedEdit() {
+  if (currentEditIndex !== null && bearbeitet) {
+    const wirklich = confirm("Du hast eine Bearbeitung nicht gespeichert. Änderungen verwerfen?");
+    if (!wirklich) return false;
+  }
+  currentEditIndex = null;
+  return true;
+}
+function speichernZeile(index, btn) {
+  const row = btn.closest('tr');
+  const cells = row.querySelectorAll('td');
+  const keys = ['datum','stunde','fach','klasse','nachname','vorname','von','bis'];
+  keys.forEach((key, i) => {
+    eintraege[index][key] = cells[i].innerText.trim();
+  });
+  speichernUndAnzeigen();
+}
+
+function pdfErstellen() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const lehrerName = localStorage.getItem('lehrerName') || '';
+  let startY = 20;
+  if (lehrerName) {
+    doc.text(`Lehrer: ${lehrerName}`, 10, startY);
+    startY += 10;
+  }
+  doc.text("Toilettenliste", 10, startY);
+  startY += 10;
+  let letzterTag = "";
+  let boxStartY;
+  let boxInhalt = [];
+
+  eintraege.forEach((eintrag, index) => {
+    if (eintrag.datum !== letzterTag) {
+      if (boxInhalt.length > 0) {
+        const [tag, monat, jahr] = letzterTag.split('.');
+        const d = new Date(`${jahr}-${monat}-${tag}`);
+        const wochentag = d.toLocaleDateString('de-DE', { weekday: 'long' });
+        doc.setFont(undefined, 'bold');
+        doc.text(`${wochentag}, ${letzterTag}`, 10, startY);
+        doc.setFont(undefined, 'normal');
+        startY += 7;
+
+        const boxStartY = startY;
+        boxInhalt.forEach(zeile => {
+          doc.text(zeile, 10, startY);
+          startY += 7;
+        });
+        doc.rect(8, boxStartY - 5, 194, startY - boxStartY + 5);
+        startY += 10;
+      }
+      letzterTag = eintrag.datum;
+      boxInhalt = [];
+    }
+    boxInhalt.push(`${eintrag.stunde}, ${eintrag.fach}, ${eintrag.klasse}, ${eintrag.nachname}, ${eintrag.vorname}, ${eintrag.von} - ${eintrag.bis}`);
+  });
+
+  // letzte Gruppe drucken
+  if (boxInhalt.length > 0) {
+    const [tag, monat, jahr] = letzterTag.split('.');
+    const d = new Date(`${jahr}-${monat}-${tag}`);
+    const wochentag = d.toLocaleDateString('de-DE', { weekday: 'long' });
+    doc.setFont(undefined, 'bold');
+    doc.text(`${wochentag}, ${letzterTag}`, 10, startY);
+    doc.setFont(undefined, 'normal');
+    startY += 7;
+
+    const boxStartY = startY;
+    boxInhalt.forEach(zeile => {
+      doc.text(zeile, 10, startY);
+      startY += 7;
+    });
+    doc.rect(8, boxStartY - 5, 194, startY - boxStartY + 5);
+    startY += 10;
+  }
+  doc.save("toilettenliste.pdf");
+}
+
+function datenbankLoeschen() {
+  const passwort = prompt("Bitte Passwort eingeben:");
+  if (passwort !== "123") {
+    alert("Falsches Passwort.");
+    return;
+  }
+  if (confirm("Bist du sicher, dass du die gesamte Toilettenliste löschen möchtest?")) {
+    if (confirm("Das ist endgültig. Wirklich löschen?")) {
+      localStorage.removeItem("eintraege");
+      eintraege = [];
+      speichernUndAnzeigen();
+      alert("Alle Einträge wurden gelöscht.");
+    }
+  }
+}
+
+function lehrerEinstellungen() {
+  document.getElementById('lehrerModal').style.display = 'block';
+  document.getElementById('lehrerNameInput').value = localStorage.getItem('lehrerName') || '';
+  document.getElementById('faecherInput').value = (JSON.parse(localStorage.getItem('faecherListe')) || []).join(', ');
+  document.getElementById('lehrerOverlay').style.display = 'block';
+}
+
+function speichereLehrerDaten() {
+  const name = document.getElementById('lehrerNameInput').value.trim();
+  const faecher = document.getElementById('faecherInput').value.split(',').map(f => f.trim()).filter(f => f);
+  localStorage.setItem('lehrerName', name);
+  localStorage.setItem('faecherListe', JSON.stringify(faecher));
+  aktualisiereFachDropdown(faecher);
+  document.getElementById('lehrerModal').style.display = 'none';
+}
+
+function aktualisiereFachDropdown(faecher) {
+  const select = document.getElementById('fach');
+  select.innerHTML = '';
+  faecher.forEach(fach => {
+    const opt = document.createElement('option');
+    opt.value = fach;
+    opt.textContent = fach;
+    select.appendChild(opt);
+  });
+}
+
+window.onload = () => {
+  const gespeicherteDaten = localStorage.getItem("eintraege");
+  if (gespeicherteDaten) {
+    eintraege = JSON.parse(gespeicherteDaten);
+    speichernUndAnzeigen();
+  }
+  const faecher = JSON.parse(localStorage.getItem('faecherListe')) || [];
+  aktualisiereFachDropdown(faecher);
+
+  // Prüfen ob Lehrername und Fächer gesetzt sind, sonst Einstellungen öffnen
+  const vorhandenerLehrer = localStorage.getItem('lehrerName');
+  const vorhandeneFaecher = localStorage.getItem('faecherListe');
+  if (!vorhandenerLehrer || !vorhandeneFaecher) {
+    setTimeout(() => {
+      lehrerEinstellungen();
+      alert("Bitte zuerst Lehrername und Fächer eingeben.");
+    }, 200);
+  }
+};
+
+// --- Tagesverwaltung Modal und Funktionen ---
+function tageVerwalten() {
+  const tage = [...new Set(eintraege.map(e => e.datum))].sort();
+  const container = document.getElementById('kalenderTage');
+  container.innerHTML = '';
+  tage.forEach(tag => {
+    const btn = document.createElement('div');
+    btn.textContent = tag;
+    btn.dataset.tag = tag;
+    btn.classList.add('kalender-tag');
+    btn.style.padding = '8px 12px';
+    btn.style.border = '1px solid #ccc';
+    btn.style.borderRadius = '8px';
+    btn.style.cursor = 'pointer';
+    btn.style.userSelect = 'none';
+    btn.style.backgroundColor = 'white';
+    btn.onclick = () => {
+      btn.classList.toggle('active');
+      btn.style.backgroundColor = btn.classList.contains('active') ? '#cce5ff' : 'white';
+    };
+    container.appendChild(btn);
+  });
+  document.getElementById('tageModal').style.display = 'block';
+  document.getElementById('tageOverlay').style.display = 'block';
+}
+
+function getAusgewaehlteTage() {
+  return [...document.querySelectorAll('#kalenderTage .active')].map(div => div.dataset.tag);
+}
+function pdfNurAuswahl() {
+  const checked = getAusgewaehlteTage();
+  if (checked.length === 0) return alert("Bitte mindestens ein Datum auswählen!");
+  const gefiltert = eintraege.filter(e => checked.includes(e.datum));
+
+  // Sortieren wie in speichernUndAnzeigen
+  gefiltert.sort((a, b) => {
+    const [ta, ma, ja] = a.datum.split('.').map(Number);
+    const [tb, mb, jb] = b.datum.split('.').map(Number);
+    const datumA = new Date(ja, ma - 1, ta, ...(a.von || '00:00').split(':').map(Number));
+    const datumB = new Date(jb, mb - 1, tb, ...(b.von || '00:00').split(':').map(Number));
+    return datumA - datumB;
+  });
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const lehrerName = localStorage.getItem('lehrerName') || '';
+  let startY = 20;
+  if (lehrerName) {
+    doc.text(`Lehrer: ${lehrerName}`, 10, startY);
+    startY += 10;
+  }
+  doc.text("Toilettenliste (Auswahl)", 10, startY);
+  startY += 10;
+
+  let letzterTag = "";
+  let boxStartY;
+  let boxInhalt = [];
+
+  gefiltert.forEach((eintrag, index) => {
+    if (eintrag.datum !== letzterTag) {
+      if (boxInhalt.length > 0) {
+        const [tag, monat, jahr] = letzterTag.split('.');
+        const d = new Date(`${jahr}-${monat}-${tag}`);
+        const wochentag = d.toLocaleDateString('de-DE', { weekday: 'long' });
+        doc.setFont(undefined, 'bold');
+        doc.text(`${wochentag}, ${letzterTag}`, 10, startY);
+        doc.setFont(undefined, 'normal');
+        startY += 7;
+
+        const boxStartY = startY;
+        boxInhalt.forEach(zeile => {
+          doc.text(zeile, 10, startY);
+          startY += 7;
+        });
+        doc.rect(8, boxStartY - 5, 194, startY - boxStartY + 5);
+        startY += 10;
+      }
+      letzterTag = eintrag.datum;
+      boxInhalt = [];
+    }
+    boxInhalt.push(`${eintrag.stunde}, ${eintrag.fach}, ${eintrag.klasse}, ${eintrag.nachname}, ${eintrag.vorname}, ${eintrag.von} - ${eintrag.bis}`);
+  });
+
+  // letzte Gruppe drucken
+  if (boxInhalt.length > 0) {
+    const [tag, monat, jahr] = letzterTag.split('.');
+    const d = new Date(`${jahr}-${monat}-${tag}`);
+    const wochentag = d.toLocaleDateString('de-DE', { weekday: 'long' });
+    doc.setFont(undefined, 'bold');
+    doc.text(`${wochentag}, ${letzterTag}`, 10, startY);
+    doc.setFont(undefined, 'normal');
+    startY += 7;
+
+    const boxStartY = startY;
+    boxInhalt.forEach(zeile => {
+      doc.text(zeile, 10, startY);
+      startY += 7;
+    });
+    doc.rect(8, boxStartY - 5, 194, startY - boxStartY + 5);
+    startY += 10;
+  }
+
+  doc.save("toilettenliste_auswahl.pdf");
+}
+
+function loescheNurAuswahl() {
+  const checked = getAusgewaehlteTage();
+  if (checked.length === 0) return alert("Bitte mindestens ein Datum auswählen!");
+  if (!confirm(`Willst du wirklich alle Einträge der ausgewählten Tage löschen?`)) return;
+  const vorher = eintraege.length;
+  eintraege = eintraege.filter(e => !checked.includes(e.datum));
+  speichernUndAnzeigen();
+  alert(`${vorher - eintraege.length} Einträge gelöscht.`);
+  localStorage.setItem("eintraege", JSON.stringify(eintraege));
+  document.getElementById('tageModal').style.display = 'none';
+}
+
+function pdfNurTag() {
+  const filterDatum = document.getElementById('datumFilter').value.trim();
+  if (!filterDatum) return alert("Bitte ein Datum eingeben!");
+  const gefiltert = eintraege.filter(e => e.datum === filterDatum);
+  if (gefiltert.length === 0) return alert("Keine Einträge für dieses Datum gefunden.");
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const lehrerName = localStorage.getItem('lehrerName') || '';
+  let startY = 20;
+  if (lehrerName) {
+    doc.text(`Lehrer: ${lehrerName}`, 10, startY);
+    startY += 10;
+  }
+  doc.text(`Toilettenliste vom ${filterDatum}`, 10, startY);
+  startY += 10;
+
+  gefiltert.forEach((eintrag, index) => {
+    doc.text(`${index + 1}. ${eintrag.datum}, ${eintrag.stunde}, ${eintrag.fach}, ${eintrag.klasse}, ${eintrag.nachname}, ${eintrag.vorname}, ${eintrag.von} - ${eintrag.bis}`, 10, startY);
+    startY += 10;
+  });
+
+  doc.save(`toilettenliste_${filterDatum.replace(/\./g,'-')}.pdf`);
+}
+
+function loescheNurTag() {
+  const filterDatum = document.getElementById('datumFilter').value.trim();
+  if (!filterDatum) return alert("Bitte ein Datum eingeben!");
+  if (!confirm(`Willst du wirklich alle Einträge vom ${filterDatum} löschen?`)) return;
+  const vorher = eintraege.length;
+  eintraege = eintraege.filter(e => e.datum !== filterDatum);
+  speichernUndAnzeigen();
+  alert(`${vorher - eintraege.length} Einträge gelöscht.`);
+  localStorage.setItem("eintraege", JSON.stringify(eintraege));
+}
+
+
+// Gemeinsamer EventListener zum Schließen von Menü und Tagesmodal bei Klick außerhalb
+document.addEventListener('click', function(event) {
+  // Menü schließen
+  const menu = document.getElementById("optionsMenu");
+  const menuContainer = document.querySelector("div[style*='position: relative']");
+  if (menu && menu.style.display === "block" && !menu.contains(event.target) && !menuContainer.contains(event.target)) {
+    menu.style.display = "none";
+  }
+});
+
+// Neue oder ersetzte Funktion zum Löschen einer Zeile
+function zeileLoeschen(index) {
+  const eintrag = eintraege[index];
+  const nachricht = `Eintrag löschen?\n${eintrag.datum}, ${eintrag.stunde}, ${eintrag.fach}, ${eintrag.klasse}, ${eintrag.nachname}, ${eintrag.vorname}`;
+  if (confirm(nachricht)) {
+    eintraege.splice(index, 1);
+    speichernUndAnzeigen();
+  }
+}
+</script>
+
+  <div id="tageOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.3); z-index:9998;"></div>
+  <div id="tageModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; border:1px solid #ccc; padding:20px; border-radius:10px; z-index:9999; max-height:90vh; overflow:auto;">
+    <h3>Tagesverwaltung</h3>
+    <p>Klicke auf Daten, um sie auszuwählen:</p>
+    <div id="kalenderTage" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 10px 0;"></div>
+    <div style="text-align:center; margin-top:10px;">
+      <button onclick="pdfNurAuswahl()">📄 PDF für Auswahl</button>
+      <button onclick="loescheNurAuswahl()">🗑️ Auswahl löschen</button>
+      <button onclick="document.getElementById('tageModal').style.display='none'; document.getElementById('tageOverlay').style.display='none'">❌ Schließen</button>
+    </div>
+  </div>
+  <footer style="text-align:center; font-size:0.9em; color:#888; margin-top:40px;">
+    Version 1.0
+  </footer>
+</body>
